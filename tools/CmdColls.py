@@ -2,7 +2,7 @@ import subprocess
 import sys
 import attr
 
-class Cmd_Colls:
+class CmdColls:
     def __init__(self, coll, run_type = '--dry_run', cmd_coll = []):
         self.coll = coll
         self.run_type = run_type
@@ -10,7 +10,7 @@ class Cmd_Colls:
 
     def const_cmd(self):
         cmd_coll = []
-        for project in attr.mc_projects:
+        for project in attr.projects:
             if self.coll == 'project_sub': 
                 cmd = 'gbasf2 --input_dslist ' + attr.cur_dir + '/samples/' + attr.campaign + '_' + project + '.list -s ' + attr.release + ' -p ' + project + ' ' + attr.steering_file + ' -n ' + attr.files_perjob + ' ' + self.run_type
                 cmd_coll.append(cmd)
