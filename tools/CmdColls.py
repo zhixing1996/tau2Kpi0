@@ -10,9 +10,9 @@ class CmdColls:
 
     def const_cmd(self):
         cmd_coll = []
-        for project in attr.projects:
+        for project in attr.projects[attr.run_type]:
             if self.coll == 'project_sub': 
-                cmd = 'gbasf2 --input_dslist ' + attr.cur_dir + '/samples/' + attr.campaign + '_' + project + '.list -s ' + attr.release + ' -p ' + project + ' ' + attr.steering_file + ' -n ' + attr.files_perjob + ' ' + self.run_type
+                cmd = 'gbasf2 --input_dslist ' + attr.cur_dir + '/samples/' + attr.campaign[attr.run_type] + '_' + project + '.list -s ' + attr.release + ' -p ' + project + ' ' + attr.steering_file + ' -n ' + attr.files_perjob + ' ' + self.run_type
                 cmd_coll.append(cmd)
             elif self.coll == 'project_reschedule':
                 cmd = 'gb2_job_reschedule -p ' + project

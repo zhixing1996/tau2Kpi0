@@ -1,4 +1,3 @@
-import subprocess
 import os
 import sys
 import attr
@@ -18,7 +17,7 @@ class ROOTFiles:
     def find_locs(self, file_locs = ''):
         locs_ls = []
         if file_locs == '':
-            for project in attr.projects:
+            for project in attr.projects[attr.run_type]:
                 file_loc = attr.cur_dir + '/rootfiles/' + project + '/sub00/'
                 locs_ls.append(file_loc)
         else:
@@ -41,13 +40,13 @@ class ROOTFiles:
     def make_one(self, file_locs = ''):
         ch = TChain('tau2Kpi0')
         if file_locs == '':
-            for sample, projects in attr.samples.items():
+            for sample, projects in attr.samples[attr.run_type].items():
                 if len(projects) > 1:
                     self.merge_make_one(ch, sample, projects)
         else:
             try:
-                if len(attr.samples[file_locs]) > 1:
-                    self.merge_make_one(ch, file_locs, attr.samples[file_locs])
+                if len(attr.samples[attr.run_type][file_locs]) > 1:
+                    self.merge_make_one(ch, file_locs, attr.samples[attr.run_type][file_locs])
                 else:
                     print('{} has already been one, no need to use this function...'.format(file_locs))
                     sys.exit()

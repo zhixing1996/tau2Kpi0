@@ -1,6 +1,7 @@
 import os
 import sys
-sys.dont_write_bytecode = True
+from run_params import campaign, samples, projects
+sys.dont_write_bytecode = False
 
 author = 'Maoqiang Jing <jingmq@ihep.ac.cn>'
 date = '16:48 30-August-2021'
@@ -12,17 +13,4 @@ cur_dir = os.path.abspath(os.path.dirname('__file__'))
 steering_file = cur_dir + '/src/tau2Kpi0_sel.py'
 release = 'light-2106-rhea'
 files_perjob = '2'
-campaign = 'MC14ri_a'
-samples = {
-    'taupair': ['taupair'],
-    'uubar': ['uubar-1', 'uubar-2', 'uubar-3', 'uubar-4'],
-    'ddbar': ['ddbar'],
-    'ssbar': ['ssbar'],
-    'ccbar': ['ccbar-1', 'ccbar-2', 'ccbar-3', 'ccbar-4'],
-    'charged': ['charged-1', 'charged-2'],
-    'mixed': ['mixed-1', 'mixed-2']
-}
-projects = []
-for _, v in samples.items():
-    for p in v:
-        projects.append(p)
+run_type = 'mc'

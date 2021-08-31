@@ -28,13 +28,16 @@ def main():
     parser = optparse.OptionParser()
     parser.add_option('-d', dest = 'debug', default = False, action = 'store', help = 'debug mode')
     parser.add_option('-v', dest = 'verbose', default = False, action = 'store', help = 'verbose level')
+    parser.add_option('--type', dest = 'run_type', default = 'mc', action = 'store', help = 'run mc or data sample? [mc]/[data]')
     parser.add_option('--gb2', dest = 'gb2', default = False, action = 'store_true', help = 'gbasf2 job and project relative command collections')
     parser.add_option('--sub', dest = 'sub', default = '--dryrun', action = 'store', help = 'really submit or not? [--dryrun]/[--force]')
-    parser.add_option('--root', dest = 'root', default = False, action = 'store_true', help = 'execute root files or macros [merge (sample)]/[make_one (sample)]')
+    parser.add_option('--root', dest = 'root', default = False, action = 'store_true', help = 'execute root files or macros \
+                                                                                              [merge (sample)]/[make_one (sample)]')
 
     opts, args = parser.parse_args()
 
     attr.debug = opts.debug
+    attr.run_type = opts.run_type
     if opts.gb2:
         coll = args[0]
         run_type = opts.sub
