@@ -8,6 +8,7 @@ campaign = {
 
 samples = {
     'mc': {
+        'Kpi0': ['Kpi0'],
         'taupair': ['taupair'],
         'uubar': ['uubar-1', 'uubar-2', 'uubar-3', 'uubar-4'],
         'ddbar': ['ddbar'],
