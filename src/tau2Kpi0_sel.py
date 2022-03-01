@@ -23,11 +23,13 @@ import modularAnalysis as ma
 from variables import variables
 import vertex
 import sys
+from variables.MCGenTopo import mc_gen_topo
 
 ######################################################
 # Specify path to data sample and database
 ######################################################
 arg_dataORmc = 'mc'
+# arg_dataORmc = 'data'
 if len(sys.argv) > 1:
   arg_dataORmc = str(sys.argv[1])
 
@@ -35,11 +37,11 @@ main = b2.create_path()
 
 if arg_dataORmc == 'data':
     b2.B2INFO("CHECK: analysing data, is this correct?")
-    arg_dir = '/nfs/dust/belle2/user/rbkarl/Tau/tauEDM/MC13/DataTestFiles'
+    arg_dir = '/besfs5/groups/psip/psipgroup/user/jingmq/Belle2/tau2Kpi0/rootfiles/Kpi0/exMC_Kpi0-1.root'
     if len(sys.argv) > 2:
         arg_dir = str(sys.argv[2])
     print(arg_dir)    
-    ma.inputMdstList('default', '%s/*.root' % arg_dir, path = main)
+    ma.inputMdstList('default', '%s' % arg_dir, path = main)
     arg_outfile = 'tau2Kpi0_data.root'
     if len(sys.argv) > 3:
         arg_outfile = str(sys.argv[3])
@@ -47,12 +49,12 @@ if arg_dataORmc == 'data':
         
 elif arg_dataORmc == 'mc':
     b2.B2INFO("CHECK: analysing MC, is this correct?")
-    arg_dir = '/besfs5/groups/psip/psipgroup/user/jingmq/Belle2/tau2Kpi0/rootfiles/Kpi0/exMC_Kpi0*.root'
+    arg_dir = '/besfs5/groups/psip/psipgroup/user/jingmq/Belle2/tau2Kpi0/rootfiles/Kpi0/exMC_Kpi0-1.root'
     if len(sys.argv) > 2:
         arg_dir = str(sys.argv[2])
     print(arg_dir)
     ma.inputMdstList('default', '%s' % arg_dir, path = main)
-    arg_outfile = '/besfs5/groups/psip/psipgroup/user/jingmq/Belle2/tau2Kpi0/rootfiles/Kpi0/Kpi0-source.root'
+    arg_outfile = 'tau2Kpi0_MC.root'
     if len(sys.argv) > 3:
         arg_outfile = str(sys.argv[3])
     print(arg_outfile)
@@ -73,75 +75,36 @@ TotalFourMomentumParticlesInList = {
 ##################################################################################
 # pi0 reconstruction with loose photons 
 ##################################################################################
-ma.fillParticleList('gamma:good', '', path = main)
-
-gammaDetectorLocation = {
-    'FWD' : 'clusterReg == 1',
-    'BRL' : 'clusterReg == 2',
-    'BWD' : 'clusterReg == 3'
-}
-
-gammaForPi0lists = []
-for g in gammaDetectorLocation.keys():
-    gammaForPi0Cuts = gammaDetectorLocation[g]
-    gammaForPi0Cuts += ' and abs(clusterTiming) < 200'
-    gammaForPi0Cuts += ' and -0.8660 < cosTheta < 0.9563'
-    gammaForPi0Cuts += ' and clusterNHits > 1.5'
-    gammaForPi0 = 'gamma:looseForPi0{}'.format(g)
-    gammaForPi0lists.append(gammaForPi0)
-    ma.cutAndCopyLists(gammaForPi0, 'gamma:good', gammaForPi0Cuts, path = main)
-
-# -# -- -- cos of opening angle between the photons
-variables.addAlias('cosAngle2Photons', 
-                   'formula((daughter(0, px)*daughter(1, px) + daughter(0, py)*daughter(1, py) + daughter(0, pz)*daughter(1, pz))/daughter(0, p)/daughter(1, p))')
-variables.addAlias('leadingclusterE', 'formula(max(daughter(0, clusterE), daughter(1, clusterE)))')
-variables.addAlias('subleadingclusterE', 'formula(min(daughter(0, clusterE), daughter(1, clusterE)))')
-
-# Determine pi0 reco for individual Detector Parts
-Pi0CutLabel = ['leadingclusterE', 'subleadingclusterE', 'cosAngle2Photons', 'p']
-Pi0CutValue = {
-    'FWD,FWD'   :   [0.5625, 0.1625, 0.9458, 0.9444],
-    'BRL,BRL'   :   [0.4125, 0.0625, 0.8875, 0.6333],
-    'BWD,BWD'   :   [0.4125, 0.1125, 0.8708, 0.6111],
-    'BRL,FWD'   :   [0.3625, 0.0875, 0.8875, 0.5889],
-    'BRL,BWD'   :   [0.3625, 0.0875, 0.8875, 0.5889]
-}
-
-Pi0lists = []
-for cut in Pi0CutValue.keys():
-    gammalists = cut.split(',')
-    CurrentPi0List = 'pi0:gg{}{}'.format(gammalists[0], gammalists[1])
-    Pi0lists.append(CurrentPi0List)
-    Pi0Cut = '0.08 < M < 0.20'
-    for i, c in enumerate(Pi0CutLabel):
-        Pi0Cut += ' and {} > {}'.format(c, Pi0CutValue[cut][i])
-    ma.reconstructDecay('{} -> gamma:looseForPi0{} gamma:looseForPi0{}'.format(CurrentPi0List, gammalists[0], gammalists[1]), Pi0Cut, path = main)
-ma.copyLists('pi0:gg', Pi0lists, path = main)
+# eff50_May2020
+ma.fillParticleList('gamma:good', 'clusterNHits>1.5 and -0.8660 < cosTheta < 0.9563 and E > 0.100', path = main)
+ma.reconstructDecay('pi0:gg -> gamma:good gamma:good', '0.115 < InvM < 0.152', path = main)
 variables.addAlias('nPi0', 'countInList(pi0:gg)')
-ma.cutAndCopyLists('gamma:pi0', gammaForPi0lists, 'isDescendantOfList(pi0:gg) == 1', path=main)
-ma.applyEventCuts('nPi0 == 1', path = main)
-vertex.kFit('pi0:gg', conf_level = 0.0, fit_type = 'mass', daughtersUpdate = False, path = main)
-
+# release-04-02-09
+ma.cutAndCopyLists('gamma:notpi0', 'gamma:good', 'isDaughterOfList(pi0:gg) == 0 and E > 0.200', path = main)
+ma.cutAndCopyLists('gamma:other', 'gamma:good', 'isDaughterOfList(pi0:gg) == 0 and E < 0.200', path = main)
+# release-05-02-06
+# ma.cutAndCopyLists('gamma:notpi0', 'gamma:good', 'isDescendantOfList(pi0:gg) == 0 and E > 0.200', path = main)
+# release-05-02-06
+# vertex.kFit('pi0:gg', conf_level = 0, fit_type = 'mass', daughtersUpdate = False, path = main)
+# release-04-02-09
+vertex.fitVertex('pi0:gg', conf_level = 0, fitter = 'kfitter', fit_type = 'mass', daughtersUpdate = False, path = main)
 
 ############################################################################################################
 # track
 ############################################################################################################
 
 # Define quality cuts for tracks
-trackCuts = 'dr <= 1. and -5. <= dz <= 5. and nCDCHits > 0'
+trackCuts = 'dr <= 1. and -3. <= dz <= 3.'
 
 # Fill the particle lists of Kions and gammas with the quality criteria defined above
 ma.fillParticleList('e-:good', trackCuts, path = main)
 ma.fillParticleList('mu-:good', trackCuts, path = main)
 ma.fillParticleList('K+:good', trackCuts, path = main)
 
-modifiedIDcut = 0.9
-variables.addAlias('ModelectronID', 'formula(electronID/(electronID + muonID + kaonID + pionID))')
-variables.addAlias('ModmuonID', 'formula(muonID/(electronID + muonID + kaonID + pionID))')
-variables.addAlias('ModkaonID', 'formula(kaonID/(electronID + muonID + pionID + kaonID))')
-eIDCuts = 'ModelectronID > {}'.format(modifiedIDcut)
-muIDCuts = 'ModmuonID > {}'.format(modifiedIDcut)
-KIDCuts = 'ModkaonID > {}'.format(modifiedIDcut)
+modifiedIDcut = 0.5
+eIDCuts = 'electronID > {}'.format(modifiedIDcut)
+muIDCuts = 'muonID > {}'.format(modifiedIDcut)
+KIDCuts = 'kaonID > {}'.format(modifiedIDcut)
 variables.addAlias('EoverP', 'formula(ifNANgiveX(clusterE, -1)/p)')
 
 ma.cutAndCopyLists('e-:pid', 'e-:good', eIDCuts, path = main)
@@ -151,25 +114,19 @@ variables.addAlias('nElectronTracks', 'countInList(e-:pid)')
 variables.addAlias('nMuonTracks', 'countInList(mu-:pid)')
 variables.addAlias('nKaonTracks', 'countInList(K-:pid)')
 
-gammaCuts = 'E > 0.2'
-gammaCuts += ' and -0.8660 < cosTheta < 0.9563'
-gammaCuts += ' and clusterNHits > 1.5'
-gammaCuts += ' and isDescendantOfList(pi0:gg) == 0'
-ma.cutAndCopyLists('gamma:notPi0', 'gamma:good', gammaCuts, path=main)
-
 ######################################################
 # event based cut - 2 tracks in event
 ######################################################
-variables.addAlias('nGoodPhotons', 'countInList(gamma:notPi0)')
+variables.addAlias('nGoodPhotons', 'countInList(gamma:notpi0)')
+# ma.applyEventCuts('((nElectronTracks == 1 and nMuonTracks == 0) or (nMuonTracks == 1 and nElectronTracks == 0))', path = main)
 ma.applyEventCuts('nElectronTracks == 1 or nMuonTracks == 1', path = main)
 ma.applyEventCuts('nKaonTracks == 1', path = main)
 
 #######################################################
 # EventShape and EventKinamatics modules
 #######################################################
-ma.buildEventShape(['K+:pid', 'e-:pid', 'mu-:pid', 'gamma:pi0'], path = main)
-ma.buildEventKinematics(['K-:pid', 'e-:pid', 'mu-:pid', 'gamma:pi0'], path = main)
-ma.applyEventCuts('thrust < 0.99 and foxWolframR2 > 0.1', path = main)
+ma.buildEventShape(['K+:pid', 'e-:pid', 'mu-:pid', 'pi0:gg', 'gamma:notpi0'], path = main)
+ma.buildEventKinematics(['K-:pid', 'e-:pid', 'mu-:pid', 'pi0:gg', 'gamma:notpi0'], path = main)
 
 ######################################################
 # Signal and tag sides
@@ -186,13 +143,29 @@ variables.addAlias('dmID_1prong1', 'daughter(1, extraInfo(decayModeID))') # reco
 
 # Select vpho candidates with signal and tag in opposite sides of the event.
 variables.addAlias('cosTheta1',
-                   'formula(daughter(0, daughter(0, cosToThrustOfEvent))*daughter(1, daughter(0,cosToThrustOfEvent)))')
+                   'formula(daughter(0, daughter(0, cosToThrustOfEvent))*daughter(1, daughter(0, cosToThrustOfEvent)))')
 variables.addAlias('cosTheta2',
-                   'formula(daughter(0, daughter(1, cosToThrustOfEvent))*daughter(1, daughter(0,cosToThrustOfEvent)))')
+                   'formula(daughter(0, daughter(1, cosToThrustOfEvent))*daughter(1, daughter(0, cosToThrustOfEvent)))')
 
 ma.applyCuts('vpho', 'cosTheta1 < 0 and cosTheta2 < 0', path = main)
+ma.applyEventCuts('thrust > 0.94', path = main)
 
-variables.addAlias('gammas_clusterE', 'totalEnergyOfParticlesInList(gamma:notPi0)')
+variables.addAlias('gamma_notpi0_clusterE', 'totalECLEnergyOfParticlesInList(gamma:notpi0)')
+variables.addAlias('N_gamma_other', 'countInList(gamma:other)')
+variables.addAlias('gamma_other_clusterE', 'totalECLEnergyOfParticlesInList(gamma:other)')
+variables.addAlias('gamma_other_E', 'totalEnergyOfParticlesInList(gamma:other)')
+variables.addAlias('gamma_other_Px', 'totalPxOfParticlesInList(gamma:other)')
+variables.addAlias('gamma_other_Py', 'totalPyOfParticlesInList(gamma:other)')
+variables.addAlias('gamma_other_Pz', 'totalPzOfParticlesInList(gamma:other)')
+
+######################################################
+# check gammas in each xxxx
+######################################################
+
+variables.addAlias('N1prong1InPosThrust', 'countInList(vpho, daughter(1, daughter(0, cosToThrustOfEvent)) > 0)')
+variables.addAlias('N1prong1InNegThrust', 'countInList(vpho, daughter(1, daughter(0, cosToThrustOfEvent)) < 0)')
+variables.addAlias('NGammaInPosThrust', 'countInList(gamma:notpi0, cosToThrustOfEvent > 0)')
+variables.addAlias('NGammaInNegThrust', 'countInList(gamma:notpi0, cosToThrustOfEvent < 0)')
 
 ######################################################
 # perform MC matching for MC samples
@@ -203,14 +176,24 @@ if arg_dataORmc == 'mc':
     ma.fillParticleListFromMC('tau+:gen', cut = '', addDaughters = True, path = main)
     ma.fillParticleListFromMC('gamma:gen', '', path = main)
     ma.fillParticleListFromMC('pi0:gen', '', path = main)
-    ma.cutAndCopyLists('gamma:genisr', 'gamma:gen', 'mcMother(abs(PDG)) == 11 and isMCDescendantOfList(tau+:gen) == 0', path = main)
-    ma.cutAndCopyLists('gamma:genisrMinus', 'gamma:gen', 'mcMother(PDG) == 11 and isMCDescendantOfList(tau+:gen) == 0', path = main)
-    ma.cutAndCopyLists('gamma:genisrPlus', 'gamma:gen', 'mcMother(PDG) == -11 and isMCDescendantOfList(tau+:gen) == 0', path = main)
-    ma.cutAndCopyLists('gamma:genfsr', 'gamma:gen', 'mcMother(abs(PDG)) == 15 and isMCDescendantOfList(tau+:gen) == 1', path = main)
-    ma.cutAndCopyLists('gamma:genfsrMinus', 'gamma:gen', 'mcMother(PDG) == 15 and isMCDescendantOfList(tau+:gen) == 1', path = main)
-    ma.cutAndCopyLists('gamma:genfsrPlus', 'gamma:gen', 'mcMother(PDG) == -15 and isMCDescendantOfList(tau+:gen) == 1', path = main)
-    ma.cutAndCopyLists('pi0:genMinus', 'pi0:gen', 'hasAncestor(15,1) and isMCDescendantOfList(tau+:gen) == 1', path = main)
-    ma.cutAndCopyLists('pi0:genPlus', 'pi0:gen', 'hasAncestor(-15,1) and isMCDescendantOfList(tau+:gen) == 1', path = main)
+    # release-04-02-09
+    ma.cutAndCopyLists('gamma:genisr', 'gamma:gen', 'mcMother(abs(PDG)) == 11 and isDaughterOfList(tau+:gen) == 0', path = main)
+    ma.cutAndCopyLists('gamma:genisrMinus', 'gamma:gen', 'mcMother(PDG) == 11 and isDaughterOfList(tau+:gen) == 0', path = main)
+    ma.cutAndCopyLists('gamma:genisrPlus', 'gamma:gen', 'mcMother(PDG) == -11 and isDaughterOfList(tau+:gen) == 0', path = main)
+    ma.cutAndCopyLists('gamma:genfsr', 'gamma:gen', 'mcMother(abs(PDG)) == 15 and isDaughterOfList(tau+:gen) == 1', path = main)
+    ma.cutAndCopyLists('gamma:genfsrMinus', 'gamma:gen', 'mcMother(PDG) == 15 and isDaughterOfList(tau+:gen) == 1', path = main)
+    ma.cutAndCopyLists('gamma:genfsrPlus', 'gamma:gen', 'mcMother(PDG) == -15 and isDaughterOfList(tau+:gen) == 1', path = main)
+    ma.cutAndCopyLists('pi0:genMinus', 'pi0:gen', 'hasAncestor(15,1) and isDaughterOfList(tau+:gen) == 1', path = main)
+    ma.cutAndCopyLists('pi0:genPlus', 'pi0:gen', 'hasAncestor(-15,1) and isDaughterOfList(tau+:gen) == 1', path = main)
+    # release-05-02-06
+    # ma.cutAndCopyLists('gamma:genisr', 'gamma:gen', 'mcMother(abs(PDG)) == 11 and isMCDescendantOfList(tau+:gen) == 0', path = main)
+    # ma.cutAndCopyLists('gamma:genisrMinus', 'gamma:gen', 'mcMother(PDG) == 11 and isMCDescendantOfList(tau+:gen) == 0', path = main)
+    # ma.cutAndCopyLists('gamma:genisrPlus', 'gamma:gen', 'mcMother(PDG) == -11 and isMCDescendantOfList(tau+:gen) == 0', path = main)
+    # ma.cutAndCopyLists('gamma:genfsr', 'gamma:gen', 'mcMother(abs(PDG)) == 15 and isMCDescendantOfList(tau+:gen) == 1', path = main)
+    # ma.cutAndCopyLists('gamma:genfsrMinus', 'gamma:gen', 'mcMother(PDG) == 15 and isMCDescendantOfList(tau+:gen) == 1', path = main)
+    # ma.cutAndCopyLists('gamma:genfsrPlus', 'gamma:gen', 'mcMother(PDG) == -15 and isMCDescendantOfList(tau+:gen) == 1', path = main)
+    # ma.cutAndCopyLists('pi0:genMinus', 'pi0:gen', 'hasAncestor(15,1) and isMCDescendantOfList(tau+:gen) == 1', path = main)
+    # ma.cutAndCopyLists('pi0:genPlus', 'pi0:gen', 'hasAncestor(-15,1) and isMCDescendantOfList(tau+:gen) == 1', path = main)
     variables.addAlias('nPi0s_Minus_MC', 'nParticlesInList(pi0:genMinus)')
     variables.addAlias('nPi0s_Plus_MC', 'nParticlesInList(pi0:genPlus)')
     MCtotMomentumList = []
@@ -278,7 +261,7 @@ eventVariables += ['thrust', 'foxWolframR2',
                    'missingMomentumOfEventCMS', 'missingMomentumOfEventCMS_theta',
                    'missingMass2OfEvent'
                   ]
-eventVariables += ['gammas_clusterE']
+eventVariables += ['gamma_notpi0_clusterE', 'N_gamma_other', 'gamma_other_clusterE', 'gamma_other_E', 'gamma_other_Px', 'gamma_other_Py', 'gamma_other_Pz', 'N1prong1InPosThrust', 'N1prong1InNegThrust', 'NGammaInPosThrust', 'NGammaInNegThrust']
 
 commonVariables = vc.kinematics 
 commonVariables += ['theta', 'cosTheta', 'phi', 'pt']
@@ -288,7 +271,7 @@ commonVariables += ['charge', 'cosToThrustOfEvent']
 # -- tau candidate variables
 tauVariables =  vc.inv_mass + vc.vertex + ['chiProb']
 # -- track level variables
-trackVariables = ['clusterE', 'EoverP']
+trackVariables = ['clusterE', 'EoverP', 'nCDCHits']
 trackVariables += vc.pid + IDvar
 trackVariables += vc.track_hits
 trackVariables += ['dz', 'dr']
@@ -315,14 +298,30 @@ if arg_dataORmc == 'mc':
     tauVariables += vc.mc_vertex
     tauVariables += vc.mc_variables
 
-vphoVariableList = vu.create_aliases_for_selected(list_of_variables = eventVariables,
-                                                  decay_string = '^vpho') + \
-                   vu.create_aliases_for_selected(list_of_variables = commonVariables + tauVariables,
-                                                  decay_string = 'vpho -> ^tau+ ^tau-',
-                                                  prefix = ['tau_1prong0', 'tau_1prong1']) + \
-                   vu.create_aliases_for_selected(list_of_variables = commonVariables + trackVariables + vc.inv_mass,
-                                                  decay_string = 'vpho -> [tau- -> ^K- ^pi0] [tau+ -> ^pi+]',
-                                                  prefix=['track_1prong0', 'pi0_1prong0', 'track_1prong1'])
+if arg_dataORmc == 'mc':
+    vphoVariableList = vu.create_aliases_for_selected(list_of_variables = eventVariables + mc_gen_topo(200),
+                                                      decay_string = '^vpho') + \
+                       vu.create_aliases_for_selected(list_of_variables = commonVariables + tauVariables,
+                                                      decay_string = 'vpho -> ^tau+ ^tau-',
+                                                      prefix = ['tau_1prong0', 'tau_1prong1']) + \
+                       vu.create_aliases_for_selected(list_of_variables = commonVariables + trackVariables + vc.inv_mass,
+                                                      decay_string = 'vpho -> [tau- -> ^K- ^pi0] [tau+ -> ^pi+]',
+                                                      prefix=['track_1prong0', 'pi0_1prong0', 'track_1prong1']) + \
+                       vu.create_aliases_for_selected(list_of_variables = vc.kinematics + ['clusterE'],
+                                                      decay_string = 'vpho -> [tau- -> K- [pi0 -> ^gamma ^gamma]] [tau+ -> pi+]',
+                                                      prefix=['pi0_gamma0', 'pi0_gamma1'])
+if arg_dataORmc == 'data':
+    vphoVariableList = vu.create_aliases_for_selected(list_of_variables = eventVariables,
+                                                      decay_string = '^vpho') + \
+                       vu.create_aliases_for_selected(list_of_variables = commonVariables + tauVariables,
+                                                      decay_string = 'vpho -> ^tau+ ^tau-',
+                                                      prefix = ['tau_1prong0', 'tau_1prong1']) + \
+                       vu.create_aliases_for_selected(list_of_variables = commonVariables + trackVariables + vc.inv_mass,
+                                                      decay_string = 'vpho -> [tau- -> ^K- ^pi0] [tau+ -> ^pi+]',
+                                                      prefix=['track_1prong0', 'pi0_1prong0', 'track_1prong1']) + \
+                       vu.create_aliases_for_selected(list_of_variables = vc.kinematics + ['clusterE'],
+                                                      decay_string = 'vpho -> [tau- -> K- [pi0 -> ^gamma ^gamma]] [tau+ -> pi+]',
+                                                      prefix=['pi0_gamma0', 'pi0_gamma1'])
 
 
 # Save the variables to a ROOT file

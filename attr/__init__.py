@@ -1,7 +1,7 @@
 import os
 import sys
 from attr.run_params import campaign, samples, projects
-from attr.cut_params import cut_vars
+from attr.cut_params import cut_vars, cuts_apply
 from attr.text_params import samples_text
 sys.dont_write_bytecode = False
 
@@ -13,7 +13,8 @@ os.system('mkdir -p ./rootfiles/')
 debug = False
 cur_dir = os.path.abspath(os.path.dirname('__file__'))
 steering_file = cur_dir + '/src/tau2Kpi0_sel.py'
-release = 'light-2106-rhea'
+release = 'release-04-02-08'
+# release = 'release-04-00-03'
 files_perjob = '2'
 sample_type = 'mc'
 

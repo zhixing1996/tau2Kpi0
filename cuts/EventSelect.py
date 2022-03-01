@@ -1,8 +1,9 @@
 import sys, os
 import attr
+import math
 from tools import print_sep
 from array import array
-from ROOT import TFile, TTree, TLorentzVector, TH1D, TChain, TCanvas, THStack
+from ROOT import TFile, TTree, TLorentzVector, TH1F, TChain, TCanvas, THStack
 from style import pub_style, set_hist_style, set_canvas_style, set_legend, set_arrow
 
 class EventSelect:
@@ -86,6 +87,12 @@ class EventSelect:
         m_p_cms = array('d', [0])
         m_angle_Kl = array('d', [0])
         m_angle_Kpi0 = array('d', [0])
+        m_n_l_pos = array('i', [0])
+        m_n_l_neg = array('i', [0])
+        m_n_gam_pos = array('i', [0])
+        m_n_gam_neg = array('i', [0])
+        m_n_gam_other = array('i', [0])
+        m_clusterE_gam_other = array('d', [0])
         t_out = TTree(attr.tree_name, attr.tree_name)
         t_out.Branch('dmID_1prong0', m_dmID_1prong0, 'dmID_1prong0/I')
         t_out.Branch('dmID_1prong1', m_dmID_1prong1, 'dmID_1prong1/I')
@@ -149,6 +156,12 @@ class EventSelect:
         t_out.Branch('p_cms', m_p_cms, 'p_cms/D')
         t_out.Branch('angle_Kl', m_angle_Kl, 'angle_Kl/D')
         t_out.Branch('angle_Kpi0', m_angle_Kpi0, 'angle_Kpi0/D')
+        t_out.Branch('n_l_pos', m_n_l_pos, 'n_l_pos/I')
+        t_out.Branch('n_l_neg', m_n_l_neg, 'n_l_neg/I')
+        t_out.Branch('n_gam_pos', m_n_gam_pos, 'n_gam_pos/I')
+        t_out.Branch('n_gam_neg', m_n_gam_neg, 'n_gam_neg/I')
+        t_out.Branch('n_gam_other', m_n_gam_other, 'n_gam_other/I')
+        t_out.Branch('clusterE_gam_other', m_clusterE_gam_other, 'clusterE_gam_other/I')
         for target_path in self.target_paths:
             print_sep('/')
             print('extract information')
@@ -165,6 +178,7 @@ class EventSelect:
             NEntries = t_in.GetEntries()
             for ientry in range(NEntries):
                 t_in.GetEntry(ientry)
+                if not ((t_in.nMuonTracks == 1 and t_in.nElectronTracks == 0) or (t_in.nMuonTracks == 0 and t_in.nElectronTracks == 1)): continue
                 m_dmID_1prong0[0] = int(t_in.dmID_1prong0)
                 m_dmID_1prong1[0] = int(t_in.dmID_1prong1)
                 m_n_e[0] = int(t_in.nElectronTracks)
@@ -226,13 +240,25 @@ class EventSelect:
                 m_pid_l_d[0] = t_in.track_1prong1_deuteronID
                 m_dz_l[0] = t_in.track_1prong1_dz
                 m_dr_l[0] = t_in.track_1prong1_dr
+                p_K_cms = TLorentzVector(0, 0, 0, 0)
+                p_l_cms = TLorentzVector(0, 0, 0, 0)
+                p_pi0_cms = TLorentzVector(0, 0, 0, 0)
+                p_K_cms.SetPxPyPzE(t_in.track_1prong0_px_CMS, t_in.track_1prong0_py_CMS, t_in.track_1prong0_pz_CMS, t_in.track_1prong0_E_CMS)
+                p_l_cms.SetPxPyPzE(t_in.track_1prong1_px_CMS, t_in.track_1prong1_py_CMS, t_in.track_1prong1_pz_CMS, t_in.track_1prong1_E_CMS)
+                p_pi0_cms.SetPxPyPzE(t_in.pi0_1prong0_px_CMS, t_in.pi0_1prong0_py_CMS, t_in.pi0_1prong0_pz_CMS, t_in.pi0_1prong0_E_CMS)
+                m_p_cms[0] = (p_K_cms + p_l_cms).P()
                 p_K = TLorentzVector(0, 0, 0, 0)
                 p_l = TLorentzVector(0, 0, 0, 0)
-                p_K.SetPxPyPzE(t_in.track_1prong0_px_CMS, t_in.track_1prong0_py_CMS, t_in.track_1prong0_pz_CMS, t_in.track_1prong0_E_CMS)
-                p_l.SetPxPyPzE(t_in.track_1prong1_px_CMS, t_in.track_1prong1_py_CMS, t_in.track_1prong1_pz_CMS, t_in.track_1prong1_E_CMS)
-                m_p_cms[0] = (p_K + p_l).P()
-                m_angle_Kl[0] = abs(t_in.track_1prong0_theta_CMS - t_in.track_1prong1_theta_CMS)
-                m_angle_Kpi0[0] = abs(t_in.pi0_1prong0_theta_CMS - t_in.track_1prong0_theta_CMS)
+                p_K.SetPxPyPzE(t_in.track_1prong0_px, t_in.track_1prong0_py, t_in.track_1prong0_pz, t_in.track_1prong0_E)
+                p_l.SetPxPyPzE(t_in.track_1prong1_px, t_in.track_1prong1_py, t_in.track_1prong1_pz, t_in.track_1prong1_E)
+                m_angle_Kl[0] = abs((p_K.Vect()).Angle(p_l.Vect()))
+                m_angle_Kpi0[0] = abs((p_K_cms.Vect()).Angle(p_pi0_cms.Vect()))
+                m_n_l_pos[0] = int(t_in.N1prong1InPosThrust)
+                m_n_l_neg[0] = int(t_in.N1prong1InNegThrust)
+                m_n_gam_pos[0] = int(t_in.NGammaInPosThrust)
+                m_n_gam_neg[0] = int(t_in.NGammaInNegThrust)
+                m_n_gam_other[0] = int(t_in.N_gamma_other)
+                m_clusterE_gam_other[0] = t_in.gamma_other_clusterE
                 t_out.Fill()
             f_out.cd()
             t_out.Write()
@@ -241,7 +267,7 @@ class EventSelect:
             print('output file: ' + dest_file)
             print_sep('/')
 
-    def cuts(self):
+    def plot(self):
         if not os.path.exists('./figs/'):
             os.makedirs('./figs/')
         ch = TChain(attr.tree_name)
@@ -250,27 +276,44 @@ class EventSelect:
             hist_list = []
             mbc = TCanvas('mbc_' + k, '', 800, 600)
             set_canvas_style(mbc)
+            if attr.cut_vars[self.vars]['logy']: mbc.SetLogy()
             for target_path, sample in zip(self.target_paths, self.samples):
                 xmin, xmax, xbins = attr.cut_vars[self.vars]['xrange']
                 if not '-raw.root' in target_path:
-                    source_file = target_path + '-raw.root'
+                    if sample == 'Kpi0': target_path = attr.cur_dir + '/rootfiles/taupair/taupair'
+                    if self.mode == 'study': source_file = target_path + '-raw.root'
+                    if self.mode == 'show': source_file = target_path + '-cuts.root'
                 else:
+                    if sample == 'Kpi0' and self.mode == 'study': target_path = attr.cur_dir + '/rootfiles/taupair/taupair-raw.root'
+                    if sample == 'Kpi0' and self.mode == 'show': target_path = attr.cur_dir + '/rootfiles/taupair/taupair-cuts.root'
                     source_file = target_path
                 hist_name = k + '_' + v + '_' + sample
-                hist = TH1D(hist_name, '', xbins, xmin, xmax)
+                hist = TH1F(hist_name, '', xbins, xmin, xmax)
                 ch.Add(source_file)
-                ch.Draw(v + '>>' + hist_name, attr.cut_vars[self.vars]['cut'])
+                if self.mode == 'study':
+                    if sample == 'Kpi0':
+                        mode_cut = ' && (((mode_taum == 1 || mode_taum == 2) && mode_taup == 7) || ((mode_taup == 1 || mode_taup == 2) && mode_taum == 7))'
+                        ch.Draw(v + '>>' + hist_name, attr.cut_vars[self.vars]['cut'] + mode_cut)
+                    elif sample == 'taupair':
+                        mode_cut = ' && !(((mode_taum == 1 || mode_taum == 2) && mode_taup == 7) || ((mode_taup == 1 || mode_taup == 2) && mode_taum == 7))'
+                        ch.Draw(v + '>>' + hist_name, attr.cut_vars[self.vars]['cut'] + mode_cut)
+                    else: ch.Draw(v + '>>' + hist_name, attr.cut_vars[self.vars]['cut'])
+                if self.mode == 'show': ch.Draw(v + '>>' + hist_name, attr.cut_vars[self.vars]['cut'])
                 set_hist_style(hist, attr.cut_vars[self.vars]['xtitle'][k], attr.cut_vars[self.vars]['ytitle'], attr.samples_text[sample][1], attr.samples_text[sample][2])
                 hist_list.append(hist)
                 ch.Reset()
+                print('{} has been drawn...'.format(sample))
             y_num = []
+            N_tot = []
             hs = THStack('hs', 'Stacked')
             for hist in hist_list:
                 hs.Add(hist)
                 y_num.append(hist.GetMaximum())
+                N_tot.append(hist.Integral())
             hist_list[0].Draw()
             hs.Draw('same')
-            hist_list[0].GetYaxis().SetRangeUser(0, 1.1*sum(y_num))
+            if attr.cut_vars[self.vars]['logy']: hist_list[0].GetYaxis().SetRangeUser(1, 25.5*sum(y_num))
+            if not attr.cut_vars[self.vars]['logy']: hist_list[0].GetYaxis().SetRangeUser(0, 1.1*sum(y_num))
             if 'legend' in attr.cut_vars[self.vars]['widget']:
                 from ROOT import TLegend
                 left, bottom, right, top = attr.cut_vars[self.vars]['legend']
@@ -279,9 +322,55 @@ class EventSelect:
                 legend.Draw()
             if 'arrow' in attr.cut_vars[self.vars]['widget']:
                 from ROOT import TArrow
-                size, type, color = attr.cut_vars[self.vars]['arrow']
-                arrow = TArrow(attr.cut_vars[self.vars]['pos'][k], 0, attr.cut_vars[self.vars]['pos'][k], 0.8*sum(y_num), size, type)
-                set_arrow(arrow, color)
-                arrow.Draw()
+                arrow_list = []
+                for arrow_param, pos in zip(attr.cut_vars[self.vars]['arrow'], attr.cut_vars[self.vars]['pos'][k]):
+                    size, type, color = arrow_param
+                    arrow = TArrow(pos, 0, pos, 0.8*sum(y_num), size, type)
+                    set_arrow(arrow, color)
+                    arrow_list.append(arrow)
+                for arrow in arrow_list:
+                    arrow.Draw()
             mbc.SaveAs('./figs/' + k + '_' + self.vars + '.pdf')
+            sig = N_tot[-1]/math.sqrt(sum(N_tot))
+            print('significance in {} is {}'.format(self.vars, round(sig, 2)))
             input('Press <Enter> to exit...')
+
+    def apply(self):
+        ch = TChain(attr.tree_name)
+        for target_path, sample in zip(self.target_paths, self.samples):
+            if not '-raw.root' in target_path:
+                if sample == 'Kpi0': target_path = attr.cur_dir + '/rootfiles/taupair/taupair'
+                source_file = target_path + '-raw.root'
+                if sample == 'Kpi0': target_path = attr.cur_dir + '/rootfiles/Kpi0/Kpi0'
+                target_file = target_path + '-cuts.root'
+            else:
+                if sample == 'Kpi0': target_path = attr.cur_dir + '/rootfiles/taupair/taupair-raw.root'
+                source_file = target_path
+                if sample == 'Kpi0': target_path = attr.cur_dir + '/rootfiles/Kpi0/Kpi0-raw.root'
+                target_file = target_path.replace('raw', 'cuts')
+            ch.Add(source_file)
+            if sample == 'Kpi0':
+                mode_cut = ' && (((mode_taum == 1 || mode_taum == 2) && mode_taup == 7) || ((mode_taup == 1 || mode_taup == 2) && mode_taum == 7))'
+                ch_out = ch.CopyTree(attr.cuts_apply + mode_cut)
+                print_sep('*')
+                print(sample)
+                print(source_file)
+                print(target_file)
+                print_sep('*')
+            elif sample == 'taupair':
+                mode_cut = ' && !(((mode_taum == 1 || mode_taum == 2) && mode_taup == 7) || ((mode_taup == 1 || mode_taup == 2) && mode_taum == 7))'
+                print_sep('*')
+                print(sample)
+                print(source_file)
+                print(target_file)
+                print_sep('*')
+                ch_out = ch.CopyTree(attr.cuts_apply + mode_cut)
+            else:
+                ch_out = ch.CopyTree(attr.cuts_apply)
+                print_sep('*')
+                print(sample)
+                print(source_file)
+                print(target_file)
+                print_sep('*')
+            ch_out.SaveAs(target_file)
+            print('cuts for {} has been applied...'.format(sample))

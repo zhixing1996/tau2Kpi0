@@ -18,7 +18,7 @@ class CmdColls:
         cmd_coll = []
         for project in self.projects:
             if self.coll == 'project_sub': 
-                cmd = 'gbasf2 --input_dslist ' + attr.cur_dir + '/samples/' + attr.campaign[attr.sample_type] + '_' + project + '.list -s ' + attr.release + ' -p ' + project + ' ' + attr.steering_file + ' -n ' + attr.files_perjob + ' ' + self.run_type
+                cmd = 'gbasf2 --input_dslist ' + attr.cur_dir + '/samples/' + attr.campaign[attr.sample_type] + '/' + attr.campaign[attr.sample_type] + '_' + project + '.list -s ' + attr.release + ' -p ' + project + ' ' + attr.steering_file + ' -n ' + attr.files_perjob + ' ' + self.run_type
                 cmd_coll.append(cmd)
             elif self.coll == 'project_reschedule':
                 cmd = 'gb2_job_reschedule -p ' + project

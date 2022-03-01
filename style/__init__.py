@@ -72,7 +72,7 @@ def set_legend(leg, hists, texts):
     leg.SetBorderSize(0)
     leg.SetFillColor(0)
     leg.SetLineColor(0)
-    leg.SetTextSize(0.06)
+    leg.SetTextSize(0.04)
 
 def set_arrow(arr, color):
     arr.SetLineWidth(4)

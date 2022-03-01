@@ -2,23 +2,29 @@ import sys
 sys.dont_write_bytecode = False
 
 campaign = {
-    'mc': 'MC14ri_a',
-    'data': 'test_data'
+    'mc': 'MC13a',
+    'data': 'Proc11'
 }
 
 samples = {
     'mc': {
-        'Kpi0': ['Kpi0'],
-        'taupair': ['taupair'],
-        'uubar': ['uubar-1', 'uubar-2', 'uubar-3', 'uubar-4'],
+        'uubar': ['uubar-1', 'uubar-2'],
         'ddbar': ['ddbar'],
         'ssbar': ['ssbar'],
-        'ccbar': ['ccbar-1', 'ccbar-2', 'ccbar-3', 'ccbar-4'],
-        'charged': ['charged-1', 'charged-2'],
-        'mixed': ['mixed-1', 'mixed-2']
+        'ccbar': ['ccbar-1', 'ccbar-2'],
+        'charged': ['charged'],
+        'mixed': ['mixed'],
+        'taupair': ['taupair'],
+        'eeee': ['eeee'],
+        'eemumu': ['eemumu'],
+        'eeKK': ['eeKK'],
+        'eepp': ['eepp'],
+        'ee': ['ee'],
+        'mumu': ['mumu'],
+        'Kpi0': ['taupair']
     },
     'data': {
-        'taupair': ['taupair']
+        'proc11': ['exp7']
     }
 }
 
